@@ -10,7 +10,7 @@ const on = computed(() => pult.live.masterOn);
 <template>
   <button
     class="master"
-    :class="{ aus: !on }"
+    :class="on ? 'an' : 'aus'"
     type="button"
     role="switch"
     :aria-checked="on"
@@ -18,80 +18,68 @@ const on = computed(() => pult.live.masterOn);
     :disabled="!pult.online"
     @click="pult.setMaster(!on)"
   >
-    <span class="schild">Master</span>
-    <span class="wert">{{ on ? "An" : "Aus" }}</span>
-    <span class="hinweis">{{ on ? "Bild und Ton laufen" : "Alles ist dunkel" }}</span>
+    <span class="titel">{{ on ? "Master an" : "Master aus" }}</span>
+    <span class="hinweis">{{ on ? "Klicken blendet alles aus" : "Klicken blendet wieder ein" }}</span>
   </button>
 </template>
 
 <style scoped>
 .master {
+  --farbe: var(--go);
+
   display: grid;
   flex: none;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 0.75rem;
-  align-items: baseline;
-  width: 13.5rem;
-  padding: 0.7rem 1rem;
+  gap: 0.1rem;
+  align-content: center;
+  justify-items: center;
+  width: 15rem;
+  min-height: 4.75rem;
+  padding: 0.35rem 1rem;
   border: 0;
-  border-left: 1px solid var(--kante);
-  background: color-mix(in srgb, var(--go) 16%, var(--pult));
-  text-align: left;
-  transition: background-color 120ms linear;
-}
-
-.master:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--go) 26%, var(--pult));
-}
-
-.master.aus {
-  background: var(--blackout);
+  border-bottom: 6px solid color-mix(in srgb, #000 35%, var(--farbe));
+  border-radius: 12px;
+  background: var(--farbe);
   color: var(--nacht);
 }
 
-.master.aus:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--blackout) 86%, var(--kreide));
+.master.aus {
+  --farbe: var(--blackout);
 }
 
-.schild {
-  font-family: var(--stencil);
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
+.master:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--kreide) 14%, var(--farbe));
 }
 
-.wert {
-  font-family: var(--stencil);
-  font-size: 2.6rem;
+.master:active:not(:disabled) {
+  border-bottom-width: 2px;
+  transform: translateY(4px);
+}
+
+.titel {
+  font-family: var(--logo);
+  font-size: 1.5rem;
   font-weight: 700;
-  line-height: 1;
-  text-align: right;
+  line-height: 1.1;
 }
 
 .hinweis {
-  grid-column: 1 / -1;
-  margin-top: 0.2rem;
   font-size: 0.85rem;
 }
 
 @media (max-width: 40rem) {
   .master {
-    width: 7rem;
-    padding: 0.5rem 0.65rem;
+    width: 7.5rem;
+    min-height: 4rem;
+    padding-inline: 0.5rem;
   }
 
-  .schild {
-    display: none;
+  .titel {
+    font-size: 1.05rem;
+    text-align: center;
   }
 
   .hinweis {
     display: none;
-  }
-
-  .wert {
-    grid-column: 1 / -1;
-    text-align: center;
   }
 }
 </style>

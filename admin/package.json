@@ -1,7 +1,7 @@
 {
   "name": "ambient-forge-admin",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
-    "@fontsource/big-shoulders-stencil": "^5.3.0",
+    "@fontsource/cinzel": "^5.3.0",
     "pinia": "^4.1.0",
     "qrcode": "^1.5.4",
     "vue": "^3.5.44",

@@ -4,6 +4,7 @@ import { computed, ref, watch } from "vue";
 
 import ConfirmButton from "../components/ConfirmButton.vue";
 import { MASTER_STOPS_MS, formatDuration } from "../components/durations.js";
+import PanelBox from "../components/PanelBox.vue";
 import SliderField from "../components/SliderField.vue";
 import { usePult } from "../stores/pult.js";
 
@@ -74,10 +75,10 @@ function loadText(display) {
       <p class="leise">Öffne den Link in einem Browser im selben Netzwerk, zum Beispiel am Fernseher oder Beamer.</p>
     </div>
 
-    <section class="link" :class="{ gesperrt: !link.enabled }">
+    <PanelBox title="Anzeige-Link">
+      <div class="link" :class="{ gesperrt: !link.enabled }">
       <div class="qr" aria-hidden="true" v-html="qr"></div>
       <div class="linkdaten">
-        <h2>Anzeige-Link</h2>
         <p v-if="!link.enabled" class="warnung">Der Link ist deaktiviert. Anzeigen zeigen nur einen Hinweis.</p>
         <input class="feld" type="text" readonly :value="link.url" aria-label="Anzeige-Link" @focus="$event.target.select()" />
         <div class="tasten">
@@ -103,10 +104,10 @@ function loadText(display) {
           </select>
         </label>
       </div>
-    </section>
+      </div>
+    </PanelBox>
 
-    <section>
-      <h2>Verbundene Anzeigen</h2>
+    <PanelBox title="Verbundene Anzeigen">
       <p v-if="pult.live.displays.length === 0" class="leer">
         Noch keine Anzeige verbunden. Sobald jemand den Link öffnet, erscheint sie hier.
       </p>
@@ -125,10 +126,10 @@ function loadText(display) {
           </div>
         </li>
       </ul>
-    </section>
+    </PanelBox>
 
-    <section class="fade">
-      <h2>Master</h2>
+    <PanelBox title="Master">
+      <div class="fade">
       <SliderField
         label="Dauer der Aus- und Einblendung"
         :value="pult.live.masterFadeMs"
@@ -136,7 +137,8 @@ function loadText(display) {
         :format="formatDuration"
         :commit="pult.setMasterFade"
       />
-    </section>
+      </div>
+    </PanelBox>
   </div>
 </template>
 
@@ -145,14 +147,6 @@ function loadText(display) {
   display: flex;
   flex-wrap: wrap;
   gap: 1.25rem;
-  padding: 1rem;
-  border: 1px solid var(--kante);
-  border-radius: var(--radius-klein);
-  background: var(--pult);
-}
-
-.link.gesperrt {
-  border-color: var(--standby);
 }
 
 .link.gesperrt .qr {
@@ -197,7 +191,7 @@ function loadText(display) {
 }
 
 .anzeigen {
-  margin: 0.5rem 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -207,7 +201,10 @@ function loadText(display) {
   gap: 0.75rem;
   align-items: baseline;
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--kante);
+}
+
+.anzeigen li + li {
+  border-top: 1px solid var(--kante);
 }
 
 .licht {
@@ -227,8 +224,6 @@ function loadText(display) {
 }
 
 .fade {
-  display: grid;
-  gap: 0.4rem;
   max-width: 24rem;
 }
 </style>

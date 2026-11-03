@@ -3,6 +3,7 @@ import AddFiles from "../components/AddFiles.vue";
 import ConfirmButton from "../components/ConfirmButton.vue";
 import DragHandle from "../components/DragHandle.vue";
 import InlineName from "../components/InlineName.vue";
+import PanelBox from "../components/PanelBox.vue";
 import SliderField from "../components/SliderField.vue";
 import { useDragSort } from "../components/useDragSort.js";
 import { usePult } from "../stores/pult.js";
@@ -17,17 +18,19 @@ const percent = (value) => `${Math.round(value * 100)} %`;
 
 <template>
   <div class="seite">
-    <div class="zeile">
-      <div>
-        <h1>Effekte</h1>
-        <p class="leise">Effekte gehören zu keinem Projekt. Die Tasten unten funktionieren in jeder Ansicht.</p>
-      </div>
-      <AddFiles kind="audio" label="Effekte hochladen" @picked="pult.createEffect($event)" />
+    <div>
+      <h1>Effekte</h1>
+      <p class="leise">Effekte gehören zu keinem Projekt. Die Tasten unten funktionieren in jeder Ansicht.</p>
     </div>
 
-    <p v-if="pult.effects.length === 0" class="leer">Lade eine Audiodatei hoch, und sie erscheint als Taste unten.</p>
+    <PanelBox title="Alle Effekte">
+      <template #aktionen>
+        <AddFiles kind="audio" label="Effekte hochladen" @picked="pult.createEffect($event)" />
+      </template>
 
-    <ul v-else class="liste">
+      <p v-if="pult.effects.length === 0" class="leer">Lade eine Audiodatei hoch, und sie erscheint als Taste unten.</p>
+
+      <ul v-else class="liste">
       <li
         v-for="effect in pult.effects"
         :key="effect.id"
@@ -52,19 +55,12 @@ const percent = (value) => `${Math.round(value * 100)} %`;
         />
         <ConfirmButton @confirm="pult.deleteEffect(effect.id)" />
       </li>
-    </ul>
+      </ul>
+    </PanelBox>
   </div>
 </template>
 
 <style scoped>
-.zeile {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
-  align-items: flex-end;
-  justify-content: space-between;
-}
-
 .liste {
   margin: 0;
   padding: 0;
@@ -76,12 +72,16 @@ const percent = (value) => `${Math.round(value * 100)} %`;
   grid-template-columns: auto minmax(0, 1fr) minmax(10rem, 16rem) auto;
   gap: 0.5rem 1rem;
   align-items: center;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--kante);
+  padding: 0.6rem 0.25rem 0.6rem 0;
+}
+
+.liste li + li {
+  border-top: 1px solid var(--kante);
 }
 
 .liste li.ziel {
-  border-top: 1px solid var(--standby);
+  outline: 2px solid var(--standby);
+  outline-offset: -2px;
 }
 
 .name {

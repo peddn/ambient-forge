@@ -7,6 +7,7 @@ import DisplayView from "./views/DisplayView.vue";
 import EffectsView from "./views/EffectsView.vue";
 import FilesView from "./views/FilesView.vue";
 import LoginView from "./views/LoginView.vue";
+import ProjectsView from "./views/ProjectsView.vue";
 
 export function createPultRouter() {
   const router = createRouter({
@@ -19,6 +20,7 @@ export function createPultRouter() {
         children: [
           { path: "", name: "desk", component: DeskView },
           { path: "projekt/:projectId", name: "project", component: DeskView, props: true },
+          { path: "projekte", name: "projects", component: ProjectsView },
           { path: "effekte", name: "effects", component: EffectsView },
           { path: "dateien", name: "files", component: FilesView },
           { path: "anzeige", name: "display", component: DisplayView },

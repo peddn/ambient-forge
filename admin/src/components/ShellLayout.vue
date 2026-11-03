@@ -1,9 +1,14 @@
 <script setup>
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+
 import { usePult } from "../stores/pult.js";
 import EffectRail from "./EffectRail.vue";
 import MasterSwitch from "./MasterSwitch.vue";
 
 const pult = usePult();
+const route = useRoute();
+const onDesk = computed(() => route.name === "desk" || route.name === "project");
 </script>
 
 <template>
@@ -12,7 +17,8 @@ const pult = usePult();
       <RouterLink class="marke" :to="{ name: 'desk' }">Ambient Forge</RouterLink>
 
       <nav aria-label="Hauptmenü">
-        <RouterLink :to="{ name: 'desk' }">Pult</RouterLink>
+        <RouterLink :class="{ aktiv: onDesk }" :to="{ name: 'desk' }">Pult</RouterLink>
+        <RouterLink :to="{ name: 'projects' }">Projekte</RouterLink>
         <RouterLink :to="{ name: 'effects' }">Effekte</RouterLink>
         <RouterLink :to="{ name: 'files' }">Dateien</RouterLink>
         <RouterLink :to="{ name: 'display' }">Anzeige</RouterLink>
@@ -69,11 +75,11 @@ const pult = usePult();
 }
 
 .marke {
-  font-family: var(--stencil);
-  font-size: 1.6rem;
+  font-family: var(--logo);
+  font-size: 1.3rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 nav {
@@ -92,7 +98,8 @@ nav a:hover {
   color: var(--kreide);
 }
 
-nav a.router-link-exact-active {
+nav a.router-link-exact-active,
+nav a.aktiv {
   background: var(--pult-hell);
   color: var(--kreide);
 }
@@ -127,7 +134,10 @@ nav a.router-link-exact-active {
   color: var(--kreide);
 }
 
+/* position: relative hält auch unsichtbare Hilfselemente im Scrollbereich.
+   Sonst verlängern sie die Seite, und unter dem Footer entsteht leerer Raum. */
 .inhalt {
+  position: relative;
   min-height: 0;
   overflow: auto;
 }
@@ -136,7 +146,7 @@ nav a.router-link-exact-active {
   position: absolute;
   z-index: 20;
   right: var(--abstand);
-  bottom: 7.5rem;
+  bottom: 7rem;
   max-width: min(32rem, calc(100% - 2rem));
   padding: 0.65rem 0.9rem;
   border: 1px solid var(--standby);
@@ -146,7 +156,9 @@ nav a.router-link-exact-active {
 
 .fuss {
   display: flex;
+  gap: 0.75rem;
   align-items: stretch;
+  padding: 0.6rem var(--abstand);
   border-top: 1px solid var(--kante);
   background: var(--pult);
 }

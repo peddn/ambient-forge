@@ -50,7 +50,8 @@ async function submit() {
 <style scoped>
 .anmeldung {
   display: grid;
-  min-height: 100%;
+  height: 100%;
+  overflow: auto;
   padding: var(--abstand);
   place-items: center;
 }
@@ -58,13 +59,13 @@ async function submit() {
 form {
   display: grid;
   gap: 0.75rem;
-  width: min(22rem, 100%);
+  width: min(24rem, 100%);
 }
 
 h1 {
-  font-family: var(--stencil);
-  font-size: 3.5rem;
-  line-height: 1;
+  font-family: var(--logo);
+  font-size: 2.5rem;
+  line-height: 1.1;
 }
 
 .fehler {

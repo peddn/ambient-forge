@@ -102,23 +102,26 @@ ol {
   gap: 0.25rem;
   align-items: center;
   padding-right: 0.6rem;
-  border: 1px solid transparent;
   border-left: 4px solid transparent;
-  border-bottom-color: var(--kante);
+  border-radius: var(--radius-klein);
+}
+
+.cue + .cue {
+  margin-top: 0.15rem;
 }
 
 .cue.gewaehlt {
   border-left-color: var(--standby);
-  background: var(--pult);
+  background: var(--pult-hell);
 }
 
 .cue.live {
   border-left-color: var(--go);
-  background: color-mix(in srgb, var(--go) 12%, var(--pult));
+  background: color-mix(in srgb, var(--go) 14%, var(--pult));
 }
 
 .cue.ziel {
-  border-top-color: var(--standby);
+  outline: 2px solid var(--standby);
 }
 
 .auswahl {
@@ -135,9 +138,9 @@ ol {
 
 .nummer {
   flex: none;
-  width: 2.1rem;
-  font-family: var(--stencil);
-  font-size: 2rem;
+  width: 1.9rem;
+  font-family: var(--logo);
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
   text-align: right;

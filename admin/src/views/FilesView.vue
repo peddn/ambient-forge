@@ -3,6 +3,7 @@ import { computed } from "vue";
 
 import { assetUrl } from "../api.js";
 import ConfirmButton from "../components/ConfirmButton.vue";
+import PanelBox from "../components/PanelBox.vue";
 import { usePult } from "../stores/pult.js";
 
 const pult = usePult();
@@ -40,8 +41,7 @@ function size(bytes) {
       Noch keine Dateien. Lade Bilder und Spuren direkt in einer Szene hoch.
     </p>
 
-    <section v-if="images.length > 0">
-      <h2>Bilder</h2>
+    <PanelBox v-if="images.length > 0" title="Bilder">
       <ul class="kacheln">
         <li v-for="asset in images" :key="asset.id">
           <img :src="assetUrl(asset.id)" alt="" loading="lazy" />
@@ -54,10 +54,9 @@ function size(bytes) {
           />
         </li>
       </ul>
-    </section>
+    </PanelBox>
 
-    <section v-if="sounds.length > 0">
-      <h2>Audiodateien</h2>
+    <PanelBox v-if="sounds.length > 0" title="Audiodateien">
       <ul class="zeilen">
         <li v-for="asset in sounds" :key="asset.id">
           <div>
@@ -72,13 +71,13 @@ function size(bytes) {
           />
         </li>
       </ul>
-    </section>
+    </PanelBox>
   </div>
 </template>
 
 <style scoped>
 ul {
-  margin: 0.5rem 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -113,7 +112,10 @@ ul {
   gap: 1rem;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--kante);
+}
+
+.zeilen li + li {
+  border-top: 1px solid var(--kante);
 }
 
 .zeilen audio {

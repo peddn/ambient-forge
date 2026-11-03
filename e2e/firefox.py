@@ -240,12 +240,23 @@ def main():
         click_text(admin, "a", "Pult")
         until(lambda: admin.find_elements(By.CSS_SELECTOR, ".kanal"))
         admin.save_screenshot(str(OUTPUT / "pult.png"))
+        print("\nLayout", flush=True)
+        admin.set_window_size(1440, 640)
+        time.sleep(0.3)
+        room = admin.execute_script(
+            "window.scrollTo(0, 99999);"
+            "return { scrollbar: document.documentElement.scrollHeight - window.innerHeight, scrolled: window.scrollY,"
+            " footer: Math.round(window.innerHeight - document.querySelector('footer').getBoundingClientRect().bottom) };"
+        )
+        check("Seite selbst lässt sich nicht scrollen", room["scrollbar"] <= 0 and room["scrolled"] == 0, room)
+        check("Footer klebt am unteren Rand", room["footer"] == 0, room)
+        admin.set_window_size(1440, 900)
+        time.sleep(0.3)
         fader = admin.find_element(By.CSS_SELECTOR, ".fader")
         size = fader.size
-        check("Lautstärkeregler steht senkrecht", size["height"] > size["width"] * 2, size)
 
         print("\nRegler mit der Maus ziehen", flush=True)
-        drag(admin, fader, 0, -size["height"] // 2 + 10, 0, 60)
+        drag(admin, fader, size["width"] // 2 - 8, 0, -80, 0)
         value = float(admin.find_element(By.CSS_SELECTOR, ".fader").get_property("value"))
         check("Lautstärkeregler folgt der Maus", 0.3 < value < 0.8, value)
         panner = admin.find_element(By.CSS_SELECTOR, ".pan input")
@@ -255,7 +266,7 @@ def main():
         set_range(admin, admin.find_element(By.CSS_SELECTOR, ".fader"), 1)
         set_range(admin, admin.find_element(By.CSS_SELECTOR, ".pan input"), 0)
 
-        time_slider = admin.find_element(By.CSS_SELECTOR, ".zeiten input[type=range]")
+        time_slider = admin.find_element(By.CSS_SELECTOR, ".szenenwechsel input[type=range]")
         drag(admin, time_slider, -time_slider.size["width"] // 2 + 30, 0, 90, 0)
         project = next((work / "data" / "projects").glob("*.json"))
         stored = until(lambda: json.loads(project.read_text())["scenes"][0]["transitionMs"] != 2000)
@@ -340,15 +351,22 @@ def main():
         click_text(admin, "button", "Alter Link wird ungültig. Erneuern?")
         check("Ungültiger Link wird gemeldet (Close-Code 4001)", until(lambda: "Dieser Link ist ungültig." in page_text(display)))
 
+        print("\nProjekte", flush=True)
+        click_text(admin, "a", "Projekte")
+        check("Projekte-Bildschirm öffnet sich", until(lambda: "Alle Projekte" in page_text(admin)))
+        admin.save_screenshot(str(OUTPUT / "projekte.png"))
+
         print("\nGriffe", flush=True)
         click_text(admin, "a", "Pult")
         until(lambda: admin.find_elements(By.CSS_SELECTOR, ".kanal"))
         names = lambda: [e.get_property("value") for e in admin.find_elements(By.CSS_SELECTOR, ".kanal input[type=text]")]
-        grips = lambda: admin.find_elements(By.CSS_SELECTOR, ".mischpult [data-sort-handle]")
+        grips = lambda: admin.find_elements(By.CSS_SELECTOR, ".spuren [data-sort-handle]")
         inputs()[1].send_keys(str(MEDIA / "regen.wav"))
         arrived = until(lambda: len(names()) == 2)
         check("Zweite Spur landet in der laufenden Szene", arrived, names())
         admin.save_screenshot(str(OUTPUT / "griffe.png"))
+        tops = [e.rect for e in admin.find_elements(By.CSS_SELECTOR, ".kanal")]
+        check("Spuren stehen untereinander", tops[1]["y"] > tops[0]["y"] and tops[1]["x"] == tops[0]["x"], tops)
 
         start = names()
         grips()[0].send_keys(Keys.ARROW_RIGHT)
@@ -365,12 +383,14 @@ def main():
             "  window.__dragSource = event.target.hasAttribute('data-sort-handle') ? 'griff' : 'anderes';"
             "}, true);"
         )
-        target = admin.find_element(By.CSS_SELECTOR, ".mischpult > [data-sort-item]")
+        target = admin.find_element(By.CSS_SELECTOR, ".spuren [data-sort-item]")
+        admin.execute_script("arguments[0].scrollIntoView({ block: 'center' });", target)
+        time.sleep(0.2)
         ActionChains(admin, duration=30).click_and_hold(grips()[1]).pause(0.2).move_by_offset(5, 5) \
             .pause(0.1).move_to_element(target).pause(0.3).perform()
         source = until(lambda: admin.execute_script("return window.__dragSource"))
         check("Firefox startet das Ziehen am Griff", source == "griff", source)
-        check("Ziel wird beim Überfahren markiert", until(lambda: admin.find_elements(By.CSS_SELECTOR, ".mischpult > .ziel")))
+        check("Ziel wird beim Überfahren markiert", until(lambda: admin.find_elements(By.CSS_SELECTOR, ".spuren .ziel")))
         admin.execute_script(
             "arguments[0].dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));", target
         )

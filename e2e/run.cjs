@@ -287,7 +287,7 @@ async function main() {
   await page.getByLabel("Name des Projekts").fill("Die Gruft von Wetterstein");
   await page.getByRole("button", { name: "Projekt anlegen" }).click();
   await page.getByText("Dieses Projekt hat noch keine Szene").waitFor();
-  check("Erstes Projekt ist aktiv", await until(async () => (await page.locator("#projektwahl option", { hasText: "(aktiv)" }).count()) === 1));
+  check("Erstes Projekt ist aktiv", await until(async () => (await page.getByText("Die Anzeige zeigt gerade ein anderes Projekt.").count()) === 0));
 
   async function createScene(name) {
     await page.getByLabel("Name der neuen Szene").fill(name);
@@ -310,8 +310,8 @@ async function main() {
     path.join(MEDIA, "lila.png"),
     path.join(MEDIA, "orange.jpg"),
   ]);
-  await until(async () => (await page.locator(".abschnitt > ul.bilder img").count()) === 2);
-  check("Bilder sind hochgeladen", (await page.locator(".abschnitt > ul.bilder img").count()) === 2);
+  await until(async () => (await page.locator(".bildliste img").count()) === 2);
+  check("Bilder sind hochgeladen", (await page.locator(".bildliste img").count()) === 2);
   check("Echtes Bild ersetzt den Platzhalter", (await page.getByText("Schwarzer Hintergrund").count()) === 0);
   await fileInputs().nth(1).setInputFiles(path.join(MEDIA, "regen.wav"));
   await page.locator(".kanal").first().getByRole("slider").first().waitFor();
@@ -321,7 +321,7 @@ async function main() {
 
   await selectScene("Wald");
   await fileInputs().nth(0).setInputFiles(path.join(MEDIA, "gruen.webp"));
-  await until(async () => (await page.locator(".abschnitt > ul.bilder img").count()) === 1);
+  await until(async () => (await page.locator(".bildliste img").count()) === 1);
   await fileInputs().nth(1).setInputFiles(path.join(MEDIA, "musik.mp3"));
   await until(async () => (await page.getByText("Leere Tonspur").count()) === 0);
 
@@ -372,7 +372,7 @@ async function main() {
 
   section("Anzeige verbinden");
   await page.getByRole("link", { name: "Anzeige", exact: true }).click();
-  const linkField = page.getByLabel("Anzeige-Link");
+  const linkField = page.getByRole("textbox", { name: "Anzeige-Link" });
   await until(async () => (await linkField.inputValue()).includes("/d/"));
   const linkUrl = await linkField.inputValue();
   check("Link enthält Token", linkUrl.endsWith(`/d/${token}`), linkUrl);
@@ -476,7 +476,7 @@ async function main() {
 
   section("Diashow");
   await page.getByLabel("Standzeit je Bild").fill("0");
-  await page.getByLabel("Bildwechsel").fill("1");
+  await page.getByLabel("Überblendung zwischen Bildern").fill("1");
   check("Regler zeigt den Wert", await page.locator(".regler", { hasText: "Standzeit je Bild" }).getByText("1 s", { exact: true }).isVisible());
   const first = await display.evaluate(PICTURE);
   const changed = await until(async () => {
@@ -488,6 +488,24 @@ async function main() {
   check("Diashow beginnt wieder von vorn", back);
   const loopsAfterEdit = await display.evaluate(() => window.__starts.filter((start) => start.loop).length);
   check("Änderung an der Diashow lässt die Spur weiterlaufen", loopsAfterEdit === loops.length, loopsAfterEdit);
+
+  section("Layout");
+  async function pageLayout() {
+    return page.evaluate(() => {
+      window.scrollTo(0, 99999);
+      const footer = document.querySelector("footer").getBoundingClientRect();
+      return {
+        overflow: document.documentElement.scrollHeight - window.innerHeight,
+        scrolled: window.scrollY,
+        gapBelowFooter: Math.round(window.innerHeight - footer.bottom),
+      };
+    });
+  }
+  await page.setViewportSize({ width: 1440, height: 480 });
+  const tight = await pageLayout();
+  check("Seite lässt sich auch im kleinen Fenster nicht scrollen", tight.overflow <= 0 && tight.scrolled === 0, tight);
+  check("Footer klebt am unteren Rand", tight.gapBelowFooter === 0, tight);
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   section("Regler und Griffe mit der Maus");
   async function mouseDrag(locator, startX, startY, moveX, moveY) {
@@ -503,7 +521,7 @@ async function main() {
     window.__dragStarts = 0;
     document.addEventListener("dragstart", () => (window.__dragStarts += 1), true);
   });
-  await mouseDrag(fader, 0.5, 0.05, 0, 60);
+  await mouseDrag(fader, 0.97, 0.5, -70, 0);
   const dragged = Number(await fader.inputValue());
   check("Lautstärkeregler folgt der Maus", dragged > 0.2 && dragged < 0.85, dragged);
   await mouseDrag(panner, 0.5, 0.5, 30, 0);
@@ -512,7 +530,7 @@ async function main() {
   await fader.fill("1");
   await panner.fill("0");
 
-  const timeSlider = page.getByLabel("Szenenwechsel");
+  const timeSlider = page.getByLabel("Überblendung beim Wechsel in diese Szene");
   await mouseDrag(timeSlider, 0.1, 0.5, 120, 0);
   const movedStop = Number(await timeSlider.inputValue());
   check("Zeitregler folgt der Maus", movedStop > 2, movedStop);
@@ -525,8 +543,11 @@ async function main() {
   const trackNames = () => page.locator(".kanal input[type=text]").evaluateAll((inputs) => inputs.map((input) => input.value));
   await fileInputs().nth(1).setInputFiles(path.join(MEDIA, "musik.mp3"));
   await until(async () => (await page.locator(".kanal").count()) === 2);
+  const rows = await page.locator(".kanal").evaluateAll((items) => items.map((item) => item.getBoundingClientRect()));
+  check("Spuren stehen untereinander", rows[1].top >= rows[0].bottom - 1 && Math.round(rows[0].left) === Math.round(rows[1].left), rows);
+  await page.screenshot({ path: path.join(OUTPUT, "08b-pult-zwei-spuren.png") });
   const tracksBefore = await trackNames();
-  const trackHandles = page.locator(".mischpult [data-sort-handle]");
+  const trackHandles = page.locator(".spuren [data-sort-handle]");
   await trackHandles.nth(1).dragTo(page.locator(".kanal").first());
   await until(async () => (await trackNames())[0] === tracksBefore[1]);
   check("Spuren lassen sich am Griff sortieren", (await trackNames())[0] === tracksBefore[1], await trackNames());
@@ -535,7 +556,7 @@ async function main() {
   await until(async () => (await trackNames())[0] === tracksBefore[0]);
   check("Griff funktioniert mit Pfeiltasten", (await trackNames())[0] === tracksBefore[0], await trackNames());
   check("Griff behält beim Verschieben den Fokus", await until(() => page.evaluate(() => document.activeElement.hasAttribute("data-sort-handle"))));
-  await page.locator(".kanal").nth(1).getByRole("button", { name: "Spur entfernen" }).click();
+  await page.locator(".kanal").nth(1).getByRole("button", { name: /entfernen/ }).click();
   await until(async () => (await page.locator(".kanal").count()) === 1);
 
   const cueNames = () => page.locator(".cue .titel").allTextContents();
@@ -546,9 +567,9 @@ async function main() {
   await page.locator(".cue").nth(1).locator("[data-sort-handle]").dragTo(page.locator(".cue").first());
   await until(async () => (await cueNames())[0] === cuesBefore[0]);
 
-  const imageOrder = () => page.locator(".abschnitt > ul.bilder img").evaluateAll((images) => images.map((image) => image.src));
+  const imageOrder = () => page.locator(".bildliste img").evaluateAll((images) => images.map((image) => image.src));
   const imagesBefore = await imageOrder();
-  await page.locator(".abschnitt > ul.bilder [data-sort-handle]").nth(1).dragTo(page.locator(".abschnitt > ul.bilder li").first());
+  await page.locator(".bildliste [data-sort-handle]").nth(1).dragTo(page.locator(".bildliste li").first());
   await until(async () => (await imageOrder())[0] === imagesBefore[1]);
   check("Bilder lassen sich am Griff sortieren", (await imageOrder())[0] === imagesBefore[1]);
 
@@ -758,10 +779,15 @@ async function main() {
   check("Link lässt sich kopieren", true);
 
   section("Projektwechsel");
-  await page.getByRole("link", { name: "Pult", exact: true }).click();
-  await page.locator("summary", { hasText: "Projekte verwalten" }).click();
+  await page.getByRole("link", { name: "Projekte", exact: true }).click();
+  const projectNames = () => page.locator(".liste li input").evaluateAll((inputs) => inputs.map((input) => input.value));
+  const projectRow = async (name) => page.locator(".liste li").nth((await projectNames()).indexOf(name));
+  await page.getByRole("heading", { name: "Alle Projekte" }).waitFor();
+  check("Projekte haben einen eigenen Bildschirm", (await page.locator(".liste li").count()) === 1);
+  check("Bildschirm zeigt das aktive Projekt", await page.locator(".liste li").getByText("Aktiv", { exact: true }).isVisible());
+  await page.screenshot({ path: path.join(OUTPUT, "13a-projekte.png") });
   await page.getByLabel("Name des neuen Projekts").fill("Sternenfahrt");
-  await page.getByRole("button", { name: "Anlegen", exact: true }).nth(1).click();
+  await page.getByRole("button", { name: "Projekt anlegen" }).click();
   await page.waitForURL("**/admin/projekt/**");
   await page.getByText("Die Anzeige zeigt gerade ein anderes Projekt.").waitFor();
   check("Inaktives Projekt ist markiert", true);
@@ -785,22 +811,42 @@ async function main() {
   check("Pult nennt Datei und Grund", await page.getByText("defekt.mp3").isVisible());
   check("Anzeige läuft trotzdem weiter", (await display.evaluate(PICTURE)) === "builtin-black");
   await page.getByRole("link", { name: "Pult", exact: true }).click();
-  await page.locator(".kanal").getByRole("button", { name: "Spur entfernen" }).click();
+  await page.locator(".kanal").getByRole("button", { name: /entfernen/ }).click();
   await page.getByText("Leere Tonspur").waitFor();
 
-  await page.locator("#projektwahl").selectOption({ label: "Die Gruft von Wetterstein" });
-  await page.getByRole("button", { name: "Dieses Projekt aktivieren" }).click();
+  await page.getByRole("link", { name: "Projekte", exact: true }).click();
+  await page.getByRole("heading", { name: "Alle Projekte" }).waitFor();
+  await until(async () => (await page.locator(".liste li").count()) === 2);
+  await (await projectRow("Die Gruft von Wetterstein")).getByRole("button", { name: "Aktivieren" }).click();
   await until(async () => (await display.evaluate(PICTURE)) === sha, 5000);
   check("Projekt startet mit seiner zuletzt aktiven Szene", (await display.evaluate(PICTURE)) === sha);
+  await until(async () => (await (await projectRow("Sternenfahrt")).getByRole("button", { name: "Aktivieren" }).count()) === 1);
+  await (await projectRow("Sternenfahrt")).getByRole("button", { name: "Szenen öffnen" }).click();
+  await page.waitForURL("**/admin/projekt/**");
+  await page.locator(".cue", { hasText: "Brücke" }).waitFor();
+  check("Szenen eines anderen Projekts lassen sich öffnen", await page.getByText("Die Anzeige zeigt gerade ein anderes Projekt.").isVisible());
+  await page.getByRole("link", { name: "Projekte", exact: true }).click();
+  await page.getByRole("heading", { name: "Alle Projekte" }).waitFor();
+  await until(async () => (await page.locator(".liste li").count()) === 2);
+  await page.getByLabel("Name des Projekts").nth(1).fill("Sternenreise");
+  await page.getByLabel("Name des Projekts").nth(1).press("Enter");
+  await sleep(300);
+  check("Projekt lässt sich umbenennen", (await projectNames()).includes("Sternenreise"), await projectNames());
+  await (await projectRow("Sternenreise")).getByRole("button", { name: "Löschen" }).click();
+  await (await projectRow("Sternenreise")).getByRole("button", { name: "Wirklich löschen?" }).click();
+  await until(async () => (await page.locator(".liste li").count()) === 1);
+  check("Projekt lässt sich löschen", (await page.locator(".liste li").count()) === 1);
+  await page.getByRole("link", { name: "Pult", exact: true }).click();
+  await page.locator(".cue").first().waitFor();
 
   section("Lösch-Regeln");
   await page.locator(".cue .auswahl", { hasText: "Taverne" }).click();
   check("Laufende Szene lässt sich nicht löschen", await page.getByRole("button", { name: "Szene löschen" }).isDisabled());
   await page.locator(".cue .auswahl", { hasText: "Wald" }).click();
-  await page.locator(".kanal").getByRole("button", { name: "Spur entfernen" }).click();
+  await page.locator(".kanal").getByRole("button", { name: /entfernen/ }).click();
   await page.getByText("Leere Tonspur").waitFor();
   check("Letzte Spur wird zum Platzhalter", true);
-  await page.locator(".abschnitt > ul.bilder li").hover();
+  await page.locator(".bildliste li").hover();
   await page.getByRole("button", { name: "Bild 1 entfernen" }).click();
   await page.getByText("Schwarzer Hintergrund").waitFor();
   check("Letztes Bild wird zum Platzhalter", true);

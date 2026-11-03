@@ -77,8 +77,7 @@ watch(
   gap: 0.5rem;
   align-items: stretch;
   min-width: 0;
-  min-height: 5.75rem;
-  padding: 0.6rem var(--abstand);
+  min-height: 4.75rem;
   overflow-x: auto;
 }
 

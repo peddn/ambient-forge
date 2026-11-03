@@ -16,7 +16,7 @@
   --blackout: #f0555a;
 
   --schrift: "Atkinson Hyperlegible", system-ui, sans-serif;
-  --stencil: "Big Shoulders Stencil", "Atkinson Hyperlegible", sans-serif;
+  --logo: "Cinzel", Georgia, serif;
 
   --abstand: 1rem;
   --radius-klein: 4px;
@@ -32,6 +32,7 @@ body,
 #app {
   height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 html {
@@ -150,7 +151,7 @@ button:disabled {
 }
 
 .seite > * + * {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 
 .leer {
