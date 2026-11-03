@@ -1,0 +1,179 @@
+/* Hinterbühne: dunkles Blau schont die Augen und hellt den Spielraum nicht auf.
+   Grün, Bernstein und Rot sind die Cue-Lichter eines Inspizientenpults und
+   tragen immer dieselbe Bedeutung: läuft, Achtung, dunkel. */
+
+:root {
+  color-scheme: dark;
+
+  --nacht: #0f1730;
+  --pult: #18233f;
+  --pult-hell: #212f52;
+  --kante: #34456f;
+  --arbeitslicht: #a9bfeb;
+  --kreide: #eef1e6;
+  --go: #4fd08f;
+  --standby: #f2c14e;
+  --blackout: #f0555a;
+
+  --schrift: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --stencil: "Big Shoulders Stencil", "Atkinson Hyperlegible", sans-serif;
+
+  --abstand: 1rem;
+  --radius-klein: 4px;
+  --radius-taste: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  scrollbar-color: var(--kante) var(--nacht);
+}
+
+body {
+  background: var(--nacht);
+  color: var(--kreide);
+  font-family: var(--schrift);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+:focus-visible {
+  outline: 2px solid var(--standby);
+  outline-offset: 2px;
+}
+
+.taste {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--kante);
+  border-radius: var(--radius-klein);
+  background: var(--pult-hell);
+  white-space: nowrap;
+}
+
+.taste:hover:not(:disabled) {
+  border-color: var(--arbeitslicht);
+}
+
+.taste-go {
+  border-color: var(--go);
+  background: transparent;
+  color: var(--go);
+}
+
+.taste-go:hover:not(:disabled) {
+  background: var(--go);
+  color: var(--nacht);
+}
+
+.taste-rot {
+  border-color: var(--blackout);
+  background: transparent;
+  color: var(--blackout);
+}
+
+.taste-rot:hover:not(:disabled) {
+  background: var(--blackout);
+  color: var(--nacht);
+}
+
+.feld {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--kante);
+  border-radius: var(--radius-klein);
+  background: var(--nacht);
+}
+
+.feld:hover {
+  border-color: var(--arbeitslicht);
+}
+
+.leise {
+  color: var(--arbeitslicht);
+}
+
+.klein {
+  font-size: 0.875rem;
+}
+
+.seite {
+  width: 100%;
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1.5rem var(--abstand) 2rem;
+}
+
+.seite > * + * {
+  margin-top: 1.5rem;
+}
+
+.leer {
+  padding: 1.25rem;
+  border: 1px dashed var(--kante);
+  border-radius: var(--radius-klein);
+  color: var(--arbeitslicht);
+}
+
+.nur-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

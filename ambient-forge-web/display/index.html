@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#000000" />
+    <title>Ambient Forge</title>
+    <link rel="stylesheet" href="/display/display.css" />
+  </head>
+  <body>
+    <div id="stage"></div>
+
+    <div id="wait" class="screen" hidden>
+      <p>Gleich geht es weiter.</p>
+    </div>
+
+    <div id="notice" class="screen" hidden>
+      <p id="notice-title"></p>
+      <p id="notice-text" class="small"></p>
+    </div>
+
+    <div id="start" class="screen">
+      <button id="start-button" type="button" autofocus>Anzeige starten</button>
+      <p class="small">Nach dem Klick laufen Bild und Ton von selbst.</p>
+      <p id="progress" class="small" hidden></p>
+    </div>
+
+    <script type="module" src="/display/display.js"></script>
+  </body>
+</html>
