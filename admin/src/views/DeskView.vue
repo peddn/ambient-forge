@@ -26,9 +26,10 @@ const isActive = computed(() => project.value && project.value.id === pult.live.
 const scene = computed(() => {
   if (!project.value) return null;
   const scenes = project.value.scenes;
+  const remembered = isActive.value ? pult.live.activeSceneId : project.value.activeSceneId;
   return (
     scenes.find((entry) => entry.id === selectedSceneId.value) ||
-    scenes.find((entry) => entry.id === project.value.activeSceneId) ||
+    scenes.find((entry) => entry.id === remembered) ||
     scenes[0] ||
     null
   );

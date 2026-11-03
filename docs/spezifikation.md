@@ -294,7 +294,7 @@ Die Regler senden `track.update` höchstens 30-mal pro Sekunde und ohne `id`. Da
 | `state` | Admin-Zustand | Nach dem Verbinden und bei Änderungen an Link, Master, aktivem Projekt oder aktiver Szene |
 | `displays` | Liste der Anzeige-Status | Bei Änderungen, höchstens viermal pro Sekunde |
 | `track.updated` | `rev` und die Felder von `track.update` | An alle anderen offenen Admin-Browser |
-| `data.changed` | `rev`, `scope` (`project`, `effects` oder `assets`), optional `projectId` | Nach REST-Änderungen, damit die Oberfläche diese Daten neu lädt |
+| `data.changed` | `rev`, `scope` (`project`, `effects` oder `assets`), optional `projectId` | Nach REST-Änderungen und Szenenwechseln, damit die Oberfläche diese Daten neu lädt |
 | `ack` | je nach Nachricht | Bestätigt eine Nachricht mit `id` |
 | `error` | `code` | Lehnt eine Nachricht mit `id` ab |
 | `ping` | `t` | Heartbeat |
@@ -517,5 +517,6 @@ Diese Punkte sind festgelegt, lassen sich aber noch ändern. Offene Punkte gibt 
 - Effekte, die bei ausgeschaltetem Master ausgelöst werden, gehen verloren und werden nicht nachgeholt.
 - Mehrere Admin-Browser dürfen gleichzeitig offen sein, bei Konflikten gilt die zuletzt eingetroffene Änderung.
 - Eine neue Szene startet mit 30 Sekunden Standzeit und 2 Sekunden Überblendung.
+- Die Zeitregler im Pult decken Überblendungen bis 60 Sekunden und Standzeiten bis 10 Minuten ab.
 - Sitzungen leben nur im Speicher. Nach einem Neustart des Servers meldet sich das Pult neu an.
 - Die Admin-Oberfläche hat in dieser Version keine Vorschau der Anzeige.

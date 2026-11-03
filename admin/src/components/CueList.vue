@@ -2,7 +2,8 @@
 import { computed, ref } from "vue";
 
 import { usePult } from "../stores/pult.js";
-import { moved, useDragSort } from "./useDragSort.js";
+import DragHandle from "./DragHandle.vue";
+import { useDragSort } from "./useDragSort.js";
 
 const props = defineProps({
   project: { type: Object, required: true },
@@ -14,10 +15,10 @@ const pult = usePult();
 const newName = ref("");
 
 const isActiveProject = computed(() => pult.live.activeProjectId === props.project.id);
-const sort = useDragSort((from, to) => {
-  const ids = props.project.scenes.map((scene) => scene.id);
-  pult.reorder("scenes", props.project.id, moved(ids, from, to));
-});
+const sort = useDragSort(
+  () => props.project.scenes.map((scene) => scene.id),
+  (ids) => pult.reorder("scenes", props.project.id, ids)
+);
 
 function isLive(scene) {
   return isActiveProject.value && pult.live.activeSceneId === scene.id;
@@ -40,7 +41,7 @@ async function create() {
       <li
         v-for="(scene, index) in project.scenes"
         :key="scene.id"
-        v-bind="sort.handlers(scene.id)"
+        v-bind="sort.item(scene.id)"
         class="cue"
         :class="{
           gewaehlt: scene.id === selectedId,
@@ -48,6 +49,11 @@ async function create() {
           ziel: sort.over.value === scene.id,
         }"
       >
+        <DragHandle
+          v-if="project.scenes.length > 1"
+          v-bind="sort.handle(scene.id)"
+          label="Szene verschieben: ziehen oder Pfeiltasten"
+        />
         <button class="auswahl" type="button" @click="emit('select', scene.id)">
           <span class="nummer" aria-hidden="true">{{ index + 1 }}</span>
           <span class="titel">{{ scene.name }}</span>
@@ -93,7 +99,7 @@ ol {
 
 .cue {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   align-items: center;
   padding-right: 0.6rem;
   border: 1px solid transparent;

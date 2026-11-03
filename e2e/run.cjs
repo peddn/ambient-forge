@@ -475,10 +475,9 @@ async function main() {
   await secondDesk.close();
 
   section("Diashow");
-  await page.getByLabel("Standzeit je Bild").fill("1");
-  await page.getByLabel("Standzeit je Bild").press("Tab");
-  await page.getByLabel("Bildwechsel").fill("0.2");
-  await page.getByLabel("Bildwechsel").press("Tab");
+  await page.getByLabel("Standzeit je Bild").fill("0");
+  await page.getByLabel("Bildwechsel").fill("1");
+  check("Regler zeigt den Wert", await page.locator(".regler", { hasText: "Standzeit je Bild" }).getByText("1 s", { exact: true }).isVisible());
   const first = await display.evaluate(PICTURE);
   const changed = await until(async () => {
     const current = await display.evaluate(PICTURE);
@@ -489,6 +488,69 @@ async function main() {
   check("Diashow beginnt wieder von vorn", back);
   const loopsAfterEdit = await display.evaluate(() => window.__starts.filter((start) => start.loop).length);
   check("Änderung an der Diashow lässt die Spur weiterlaufen", loopsAfterEdit === loops.length, loopsAfterEdit);
+
+  section("Regler und Griffe mit der Maus");
+  async function mouseDrag(locator, startX, startY, moveX, moveY) {
+    const box = await locator.boundingBox();
+    const x = box.x + box.width * startX;
+    const y = box.y + box.height * startY;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + moveX, y + moveY, { steps: 6 });
+    await page.mouse.up();
+  }
+  await page.evaluate(() => {
+    window.__dragStarts = 0;
+    document.addEventListener("dragstart", () => (window.__dragStarts += 1), true);
+  });
+  await mouseDrag(fader, 0.5, 0.05, 0, 60);
+  const dragged = Number(await fader.inputValue());
+  check("Lautstärkeregler folgt der Maus", dragged > 0.2 && dragged < 0.85, dragged);
+  await mouseDrag(panner, 0.5, 0.5, 30, 0);
+  check("Panning folgt der Maus", Number(await panner.inputValue()) > 0.1, await panner.inputValue());
+  check("Regler lösen kein Verschieben aus", (await page.evaluate(() => window.__dragStarts)) === 0);
+  await fader.fill("1");
+  await panner.fill("0");
+
+  const timeSlider = page.getByLabel("Szenenwechsel");
+  await mouseDrag(timeSlider, 0.1, 0.5, 120, 0);
+  const movedStop = Number(await timeSlider.inputValue());
+  check("Zeitregler folgt der Maus", movedStop > 2, movedStop);
+  await sleep(300);
+  const readProject = () => JSON.parse(fs.readFileSync(path.join(DATA, "projects", fs.readdirSync(path.join(DATA, "projects"))[0]), "utf8"));
+  const savedTransition = readProject().scenes[0].transitionMs;
+  check("Zeitregler speichert beim Loslassen", savedTransition !== 2000 && savedTransition > 0, savedTransition);
+  await timeSlider.fill("4");
+
+  const trackNames = () => page.locator(".kanal input[type=text]").evaluateAll((inputs) => inputs.map((input) => input.value));
+  await fileInputs().nth(1).setInputFiles(path.join(MEDIA, "musik.mp3"));
+  await until(async () => (await page.locator(".kanal").count()) === 2);
+  const tracksBefore = await trackNames();
+  const trackHandles = page.locator(".mischpult [data-sort-handle]");
+  await trackHandles.nth(1).dragTo(page.locator(".kanal").first());
+  await until(async () => (await trackNames())[0] === tracksBefore[1]);
+  check("Spuren lassen sich am Griff sortieren", (await trackNames())[0] === tracksBefore[1], await trackNames());
+  await trackHandles.first().focus();
+  await page.keyboard.press("ArrowRight");
+  await until(async () => (await trackNames())[0] === tracksBefore[0]);
+  check("Griff funktioniert mit Pfeiltasten", (await trackNames())[0] === tracksBefore[0], await trackNames());
+  check("Griff behält beim Verschieben den Fokus", await until(() => page.evaluate(() => document.activeElement.hasAttribute("data-sort-handle"))));
+  await page.locator(".kanal").nth(1).getByRole("button", { name: "Spur entfernen" }).click();
+  await until(async () => (await page.locator(".kanal").count()) === 1);
+
+  const cueNames = () => page.locator(".cue .titel").allTextContents();
+  const cuesBefore = await cueNames();
+  await page.locator(".cue").nth(1).locator("[data-sort-handle]").dragTo(page.locator(".cue").first());
+  await until(async () => (await cueNames())[0] === cuesBefore[1]);
+  check("Szenen lassen sich am Griff sortieren", (await cueNames())[0] === cuesBefore[1], await cueNames());
+  await page.locator(".cue").nth(1).locator("[data-sort-handle]").dragTo(page.locator(".cue").first());
+  await until(async () => (await cueNames())[0] === cuesBefore[0]);
+
+  const imageOrder = () => page.locator(".abschnitt > ul.bilder img").evaluateAll((images) => images.map((image) => image.src));
+  const imagesBefore = await imageOrder();
+  await page.locator(".abschnitt > ul.bilder [data-sort-handle]").nth(1).dragTo(page.locator(".abschnitt > ul.bilder li").first());
+  await until(async () => (await imageOrder())[0] === imagesBefore[1]);
+  check("Bilder lassen sich am Griff sortieren", (await imageOrder())[0] === imagesBefore[1]);
 
   section("Effekte");
   const effectButton = page.locator(".effekt", { hasText: "donner" });
@@ -522,6 +584,10 @@ async function main() {
   section("Szenenwechsel");
   await page.locator(".cue", { hasText: "Wald" }).getByRole("button", { name: "Zeigen" }).click();
   await page.locator(".cue.live", { hasText: "Wald" }).waitFor();
+  await page.getByRole("link", { name: "Dateien", exact: true }).click();
+  await page.getByRole("link", { name: "Pult", exact: true }).click();
+  await page.locator(".editor").waitFor();
+  check("Pult öffnet nach dem Wechsel die laufende Szene", (await page.getByLabel("Name der Szene").inputValue()) === "Wald bei Nacht", await page.getByLabel("Name der Szene").inputValue());
   const greenSha = crypto.createHash("sha256").update(fs.readFileSync(path.join(MEDIA, "gruen.webp"))).digest("hex").slice(0, 32);
   await until(async () => (await display.evaluate(PICTURE)) === greenSha, 5000);
   check("Anzeige wechselt das Bild", (await display.evaluate(PICTURE)) === greenSha);
@@ -602,6 +668,15 @@ async function main() {
   check("Ton kommt zurück, ohne neu zu laden", backOn);
   await late.close();
   await lateContext.close();
+
+  section("Master-Dauer");
+  await page.getByRole("link", { name: "Anzeige", exact: true }).click();
+  const fadeSlider = page.getByLabel("Dauer der Aus- und Einblendung");
+  await fadeSlider.fill("2");
+  check("Master-Dauer wird gespeichert", await until(() => JSON.parse(fs.readFileSync(path.join(DATA, "app.json"), "utf8")).masterFadeMs === 200));
+  await fadeSlider.fill("4");
+  await until(() => JSON.parse(fs.readFileSync(path.join(DATA, "app.json"), "utf8")).masterFadeMs === 400);
+  await page.getByRole("link", { name: "Pult", exact: true }).click();
 
   section("Protokoll");
   const raw = await browser.newContext();
@@ -747,7 +822,7 @@ async function main() {
   section("Reihenfolge");
   await page.getByRole("link", { name: "Effekte", exact: true }).click();
   const namesBefore = await page.locator(".effekt").allTextContents();
-  await page.locator(".liste li").nth(2).dragTo(page.locator(".liste li").nth(0));
+  await page.locator(".liste li").nth(2).locator("[data-sort-handle]").dragTo(page.locator(".liste li").nth(0));
   await until(async () => (await page.locator(".effekt").first().textContent()) !== namesBefore[0]);
   const namesAfter = await page.locator(".effekt").allTextContents();
   check("Effekte lassen sich per Ziehen sortieren", namesAfter[0] === namesBefore[2], { namesBefore, namesAfter });

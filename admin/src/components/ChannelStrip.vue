@@ -25,14 +25,17 @@ function move(fields) {
 
 <template>
   <article class="kanal" :class="{ stumm: track.muted }">
-    <InlineName
-      v-if="!placeholder"
-      class="kanalname"
-      :model-value="track.name"
-      label="Name der Spur"
-      @commit="pult.updateTrack(sceneId, track.id, { name: $event })"
-    />
-    <p v-else class="kanalname leise">{{ track.name }}</p>
+    <div class="kopfzeile">
+      <slot name="griff" />
+      <InlineName
+        v-if="!placeholder"
+        class="kanalname"
+        :model-value="track.name"
+        label="Name der Spur"
+        @commit="pult.updateTrack(sceneId, track.id, { name: $event })"
+      />
+      <p v-else class="kanalname leise">{{ track.name }}</p>
+    </div>
 
     <div class="regler">
       <input
@@ -116,7 +119,15 @@ function move(fields) {
   border-color: var(--standby);
 }
 
+.kopfzeile {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
 .kanalname {
+  flex: 1;
+  min-width: 0;
   min-height: 1.9rem;
   font-weight: 700;
   overflow-wrap: anywhere;

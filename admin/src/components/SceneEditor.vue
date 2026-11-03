@@ -6,8 +6,11 @@ import { BUILTIN_BLACK, usePult } from "../stores/pult.js";
 import AddFiles from "./AddFiles.vue";
 import ChannelStrip from "./ChannelStrip.vue";
 import ConfirmButton from "./ConfirmButton.vue";
+import DragHandle from "./DragHandle.vue";
+import { FADE_STOPS_MS, SLIDE_STOPS_MS, formatDuration } from "./durations.js";
 import InlineName from "./InlineName.vue";
-import { moved, useDragSort } from "./useDragSort.js";
+import SliderField from "./SliderField.vue";
+import { useDragSort } from "./useDragSort.js";
 
 const props = defineProps({
   scene: { type: Object, required: true },
@@ -20,28 +23,15 @@ const onlyPlaceholder = computed(
   () => props.scene.images.length === 1 && props.scene.images[0].assetId === BUILTIN_BLACK
 );
 
-const imageSort = useDragSort((from, to) => {
-  const ids = props.scene.images.map((image) => image.id);
-  pult.reorder("images", props.scene.id, moved(ids, from, to));
-});
-const trackSort = useDragSort((from, to) => {
-  const ids = props.scene.tracks.map((track) => track.id);
-  pult.reorder("tracks", props.scene.id, moved(ids, from, to));
-});
-
-const timing = computed(() => [
-  { key: "transitionMs", label: "Szenenwechsel", min: 0, value: props.scene.transitionMs },
-  { key: "slideDurationMs", label: "Standzeit je Bild", min: 1, value: props.scene.slideDurationMs },
-  { key: "slideFadeMs", label: "Bildwechsel", min: 0, value: props.scene.slideFadeMs },
-]);
-
-function saveTiming(key, seconds, input) {
-  const ms = Math.round(Number(seconds) * 1000);
-  if (Number.isNaN(ms)) return;
-  pult.updateScene(props.scene.id, { [key]: ms }).then((saved) => {
-    if (!saved) input.value = props.scene[key] / 1000;
-  });
-}
+const imageSort = useDragSort(
+  () => props.scene.images.map((image) => image.id),
+  (ids) => pult.reorder("images", props.scene.id, ids)
+);
+const trackSort = useDragSort(
+  () => props.scene.tracks.map((track) => track.id),
+  (ids) => pult.reorder("tracks", props.scene.id, ids)
+);
+const oneImage = computed(() => props.scene.images.length < 2);
 </script>
 
 <template>
@@ -71,9 +61,15 @@ function saveTiming(key, seconds, input) {
         <li
           v-for="image in scene.images"
           :key="image.id"
-          v-bind="imageSort.handlers(image.id)"
+          v-bind="imageSort.item(image.id)"
           :class="{ ziel: imageSort.over.value === image.id }"
         >
+          <DragHandle
+            v-if="!oneImage"
+            class="griff-bild"
+            v-bind="imageSort.handle(image.id)"
+            label="Bild verschieben: ziehen oder Pfeiltasten"
+          />
           <img
             v-if="image.assetId !== BUILTIN_BLACK"
             :src="assetUrl(image.assetId)"
@@ -94,25 +90,31 @@ function saveTiming(key, seconds, input) {
       </ul>
 
       <div class="zeiten">
-        <label v-for="field in timing" :key="field.key">
-          <span class="klein leise">{{ field.label }}</span>
-          <span class="eingabe">
-            <input
-              class="feld"
-              type="number"
-              step="0.5"
-              :min="field.min"
-              :value="field.value / 1000"
-              :disabled="field.key !== 'transitionMs' && scene.images.length < 2"
-              @change="saveTiming(field.key, $event.target.value, $event.target)"
-            />
-            <span class="klein leise">Sek.</span>
-          </span>
-        </label>
-        <p v-if="onlyPlaceholder" class="klein leise hinweis">
-          Bis zum ersten Bild zeigt die Anzeige Schwarz.
-        </p>
+        <SliderField
+          label="Szenenwechsel"
+          :value="scene.transitionMs"
+          :stops="FADE_STOPS_MS"
+          :format="formatDuration"
+          :commit="(transitionMs) => pult.updateScene(scene.id, { transitionMs })"
+        />
+        <SliderField
+          label="Standzeit je Bild"
+          :value="scene.slideDurationMs"
+          :stops="SLIDE_STOPS_MS"
+          :format="formatDuration"
+          :disabled="oneImage"
+          :commit="(slideDurationMs) => pult.updateScene(scene.id, { slideDurationMs })"
+        />
+        <SliderField
+          label="Bildwechsel"
+          :value="scene.slideFadeMs"
+          :stops="FADE_STOPS_MS"
+          :format="formatDuration"
+          :disabled="oneImage"
+          :commit="(slideFadeMs) => pult.updateScene(scene.id, { slideFadeMs })"
+        />
       </div>
+      <p v-if="onlyPlaceholder" class="klein leise">Bis zum ersten Bild zeigt die Anzeige Schwarz.</p>
     </section>
 
     <section class="abschnitt">
@@ -125,10 +127,18 @@ function saveTiming(key, seconds, input) {
         <div
           v-for="track in scene.tracks"
           :key="track.id"
-          v-bind="trackSort.handlers(track.id)"
+          v-bind="trackSort.item(track.id)"
           :class="{ ziel: trackSort.over.value === track.id }"
         >
-          <ChannelStrip :scene-id="scene.id" :track="track" />
+          <ChannelStrip :scene-id="scene.id" :track="track">
+            <template #griff>
+              <DragHandle
+                v-if="scene.tracks.length > 1"
+                v-bind="trackSort.handle(track.id)"
+                label="Spur verschieben: ziehen oder Pfeiltasten"
+              />
+            </template>
+          </ChannelStrip>
         </div>
       </div>
     </section>
@@ -234,26 +244,19 @@ function saveTiming(key, seconds, input) {
   }
 }
 
+.griff-bild {
+  position: absolute;
+  z-index: 1;
+  top: 0.25rem;
+  left: 0.25rem;
+  background: rgb(15 23 48 / 85%);
+}
+
 .zeiten {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
-  align-items: flex-end;
-}
-
-.zeiten label {
   display: grid;
-  gap: 0.15rem;
-}
-
-.eingabe {
-  display: flex;
-  gap: 0.35rem;
-  align-items: center;
-}
-
-.eingabe .feld {
-  width: 5.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  max-width: 44rem;
 }
 
 .mischpult {

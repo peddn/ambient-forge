@@ -17,7 +17,9 @@ import time
 from pathlib import Path
 
 from selenium import webdriver
+from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import Select
@@ -154,6 +156,16 @@ def set_range(driver, element, value):
     )
 
 
+def drag(driver, element, start_x, start_y, move_x, move_y):
+    """Zieht mit echten Mausereignissen, wie eine Hand es tut."""
+    steps = 6
+    actions = ActionChains(driver, duration=30)
+    actions.move_to_element_with_offset(element, start_x, start_y).click_and_hold()
+    for _ in range(steps):
+        actions.move_by_offset(move_x // steps, move_y // steps)
+    actions.release().perform()
+
+
 def level(driver):
     return driver.execute_script("return window.__level();")
 
@@ -232,6 +244,24 @@ def main():
         size = fader.size
         check("Lautstärkeregler steht senkrecht", size["height"] > size["width"] * 2, size)
 
+        print("\nRegler mit der Maus ziehen", flush=True)
+        drag(admin, fader, 0, -size["height"] // 2 + 10, 0, 60)
+        value = float(admin.find_element(By.CSS_SELECTOR, ".fader").get_property("value"))
+        check("Lautstärkeregler folgt der Maus", 0.3 < value < 0.8, value)
+        panner = admin.find_element(By.CSS_SELECTOR, ".pan input")
+        drag(admin, panner, 0, 0, 40, 0)
+        value = float(admin.find_element(By.CSS_SELECTOR, ".pan input").get_property("value"))
+        check("Panning folgt der Maus", value > 0.2, value)
+        set_range(admin, admin.find_element(By.CSS_SELECTOR, ".fader"), 1)
+        set_range(admin, admin.find_element(By.CSS_SELECTOR, ".pan input"), 0)
+
+        time_slider = admin.find_element(By.CSS_SELECTOR, ".zeiten input[type=range]")
+        drag(admin, time_slider, -time_slider.size["width"] // 2 + 30, 0, 90, 0)
+        project = next((work / "data" / "projects").glob("*.json"))
+        stored = until(lambda: json.loads(project.read_text())["scenes"][0]["transitionMs"] != 2000)
+        check("Zeitregler folgt der Maus und speichert", stored,
+              json.loads(project.read_text())["scenes"][0]["transitionMs"])
+
         print("\nAnzeige starten", flush=True)
         display.get(f"{LOCAL}/d/{token}")
         button = until(lambda: display.find_element(By.ID, "start-button"))
@@ -309,6 +339,42 @@ def main():
         click_text(admin, "button", "Link erneuern")
         click_text(admin, "button", "Alter Link wird ungültig. Erneuern?")
         check("Ungültiger Link wird gemeldet (Close-Code 4001)", until(lambda: "Dieser Link ist ungültig." in page_text(display)))
+
+        print("\nGriffe", flush=True)
+        click_text(admin, "a", "Pult")
+        until(lambda: admin.find_elements(By.CSS_SELECTOR, ".kanal"))
+        names = lambda: [e.get_property("value") for e in admin.find_elements(By.CSS_SELECTOR, ".kanal input[type=text]")]
+        grips = lambda: admin.find_elements(By.CSS_SELECTOR, ".mischpult [data-sort-handle]")
+        inputs()[1].send_keys(str(MEDIA / "regen.wav"))
+        arrived = until(lambda: len(names()) == 2)
+        check("Zweite Spur landet in der laufenden Szene", arrived, names())
+        admin.save_screenshot(str(OUTPUT / "griffe.png"))
+
+        start = names()
+        grips()[0].send_keys(Keys.ARROW_RIGHT)
+        check("Griff funktioniert mit Pfeiltasten", until(lambda: names() == start[::-1]), names())
+        focused = until(lambda: admin.execute_script("return document.activeElement.hasAttribute('data-sort-handle')"))
+        check("Griff behält beim Verschieben den Fokus", focused)
+
+        # Unter WebDriver liefert Firefox nach dem Ziehen kein drop, auch nicht bei einem
+        # schlichten div. Start und Überfahren laufen deshalb nativ, das drop löst der
+        # Test selbst aus.
+        start = names()
+        admin.execute_script(
+            "document.addEventListener('dragstart', (event) => {"
+            "  window.__dragSource = event.target.hasAttribute('data-sort-handle') ? 'griff' : 'anderes';"
+            "}, true);"
+        )
+        target = admin.find_element(By.CSS_SELECTOR, ".mischpult > [data-sort-item]")
+        ActionChains(admin, duration=30).click_and_hold(grips()[1]).pause(0.2).move_by_offset(5, 5) \
+            .pause(0.1).move_to_element(target).pause(0.3).perform()
+        source = until(lambda: admin.execute_script("return window.__dragSource"))
+        check("Firefox startet das Ziehen am Griff", source == "griff", source)
+        check("Ziel wird beim Überfahren markiert", until(lambda: admin.find_elements(By.CSS_SELECTOR, ".mischpult > .ziel")))
+        admin.execute_script(
+            "arguments[0].dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));", target
+        )
+        check("Spur landet am Ziel", until(lambda: names() == start[::-1]), names())
     finally:
         admin.quit()
         display.quit()

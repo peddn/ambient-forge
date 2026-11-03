@@ -3,6 +3,8 @@ import QRCode from "qrcode";
 import { computed, ref, watch } from "vue";
 
 import ConfirmButton from "../components/ConfirmButton.vue";
+import { MASTER_STOPS_MS, formatDuration } from "../components/durations.js";
+import SliderField from "../components/SliderField.vue";
 import { usePult } from "../stores/pult.js";
 
 const pult = usePult();
@@ -55,11 +57,6 @@ async function copy() {
   } else {
     pult.showNotice("Kopieren ging nicht. Markiere den Link und kopiere ihn von Hand.");
   }
-}
-
-function saveFade(event) {
-  const ms = Math.round(Number(event.target.value) * 1000);
-  if (!Number.isNaN(ms)) pult.setMasterFade(ms);
 }
 
 function loadText(display) {
@@ -132,21 +129,13 @@ function loadText(display) {
 
     <section class="fade">
       <h2>Master</h2>
-      <label>
-        <span class="klein leise">Dauer der Aus- und Einblendung</span>
-        <span class="eingabe">
-          <input
-            class="feld"
-            type="number"
-            min="0"
-            max="10"
-            step="0.1"
-            :value="pult.live.masterFadeMs / 1000"
-            @change="saveFade"
-          />
-          <span class="klein leise">Sek.</span>
-        </span>
-      </label>
+      <SliderField
+        label="Dauer der Aus- und Einblendung"
+        :value="pult.live.masterFadeMs"
+        :stops="MASTER_STOPS_MS"
+        :format="formatDuration"
+        :commit="pult.setMasterFade"
+      />
     </section>
   </div>
 </template>
@@ -237,19 +226,9 @@ function loadText(display) {
   font-weight: 700;
 }
 
-.fade label {
+.fade {
   display: grid;
-  gap: 0.15rem;
-  margin-top: 0.4rem;
-}
-
-.eingabe {
-  display: flex;
-  gap: 0.35rem;
-  align-items: center;
-}
-
-.eingabe .feld {
-  width: 5.5rem;
+  gap: 0.4rem;
+  max-width: 24rem;
 }
 </style>

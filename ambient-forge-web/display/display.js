@@ -63,6 +63,12 @@ function hideNotice() {
   render();
 }
 
+function showInvalidLink() {
+  allowReconnect = false;
+  engine.stop();
+  showNotice("Dieser Link ist ungültig.", "Frage den Spielleiter nach dem aktuellen Link.");
+}
+
 function send(type, data) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type, data }));
@@ -136,10 +142,7 @@ const handlers = {
     engine.stop();
     showNotice("Die Anzeige ist deaktiviert.", "Sie läuft weiter, sobald der Spielleiter sie aktiviert.");
   },
-  "link.revoked"() {
-    allowReconnect = false;
-    engine.stop();
-  },
+  "link.revoked": showInvalidLink,
   ping(data) {
     send("pong", { t: data.t });
   },
@@ -180,9 +183,7 @@ function connect() {
   current.onclose = (event) => {
     if (socket !== current) return;
     if (event.code === CLOSE_INVALID_TOKEN) {
-      allowReconnect = false;
-      engine.stop();
-      showNotice("Dieser Link ist ungültig.", "Frage den Spielleiter nach dem aktuellen Link.");
+      showInvalidLink();
       return;
     }
     scheduleReconnect();

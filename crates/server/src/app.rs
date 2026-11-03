@@ -443,9 +443,7 @@ impl App {
     pub fn activate_scene(&self, scene_id: &str) -> Result<(), ApiError> {
         self.mutate(|store| {
             let project_id = store.activate_scene(scene_id)?;
-            let mut change = Change::project(&project_id).with_state();
-            change.data = None;
-            Ok(((), change))
+            Ok(((), Change::project(&project_id).with_state()))
         })
     }
 

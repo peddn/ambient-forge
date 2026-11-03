@@ -7,7 +7,7 @@ use axum::extract::ws::{CloseFrame, Message, Utf8Bytes, WebSocket, WebSocketUpgr
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use futures_util::{SinkExt, StreamExt};
+use futures_util::{SinkExt, Stream, StreamExt};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
@@ -21,6 +21,7 @@ use crate::store::TrackPatch;
 
 const PING_INTERVAL: Duration = Duration::from_secs(5);
 const PONG_TIMEOUT: Duration = Duration::from_secs(15);
+const CLOSE_TIMEOUT: Duration = Duration::from_secs(1);
 
 #[derive(Deserialize)]
 struct Envelope {
@@ -122,8 +123,26 @@ fn close_message(code: u16) -> Message {
     }))
 }
 
+/// Wartet auf die Bestätigung des Browsers. Endet die Verbindung vorher, kann der
+/// Close-Code verloren gehen, und die Seite erfährt den Grund nicht.
+async fn await_close<S>(stream: &mut S)
+where
+    S: Stream<Item = Result<Message, axum::Error>> + Unpin,
+{
+    let _ = tokio::time::timeout(CLOSE_TIMEOUT, async {
+        while let Some(Ok(frame)) = stream.next().await {
+            if matches!(frame, Message::Close(_)) {
+                break;
+            }
+        }
+    })
+    .await;
+}
+
 async fn close_now(mut socket: WebSocket, code: u16) {
-    let _ = socket.send(close_message(code)).await;
+    if socket.send(close_message(code)).await.is_ok() {
+        await_close(&mut socket).await;
+    }
 }
 
 async fn run(
@@ -146,7 +165,9 @@ async fn run(
                 let frame = match next {
                     Some(Outgoing::Text(text)) => Message::text(text),
                     Some(Outgoing::Close(code)) => {
-                        let _ = sink.send(close_message(code)).await;
+                        if sink.send(close_message(code)).await.is_ok() {
+                            await_close(&mut stream).await;
+                        }
                         break;
                     }
                     None => break,
