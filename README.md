@@ -113,3 +113,9 @@ Die Browsertests messen das Audiosignal am Ausgang der Web Audio API.
 ```
 
 Das Skript legt in `dist/` ein statisch gelinktes Paket für Linux x86-64 und ein Quellcode-Archiv an.
+
+## Weiterlesen
+
+- `docs/spezifikation.md`: Datenmodell, Protokoll und Abläufe
+- `docs/roadmap.md`: offene Punkte, Pläne für Video und Szenen-Browser
+- `docs/freie-inhalte.md`: freie Medien und ihre Lizenzen
